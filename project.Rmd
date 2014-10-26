@@ -1,0 +1,81 @@
+---
+title: "Practical Machine Learning Project"
+output: html_document
+---
+
+1 Overview
+----------
+In a recent study participants were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+The data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants are used in the following to 
+predict the manner in which they did their exercise. In section 2 the steps taken to prepare test, training and 
+validation data set are described. Section 3 reports on training and the resulting accuracy in-sample and out of 
+sample.
+```
+# load libraries
+library(doParallel)  # for quicker training using parallel processing
+library(caret)
+```
+
+
+2 Data preparation
+------------------
+An initial import of the CSVs shows that the strings 'NA' and '#DIV/0!' should be considered NA-strings (na.strings 
+option in R read.csv function).
+```
+# read csvs
+train_raw <- read.csv('C:/Rworkspace/pml/project/pml-training.csv', na.strings=c('NA', '#DIV/0!'))
+test_raw <- read.csv('C:/Rworkspace/pml/project/pml-testing.csv', na.strings=c('NA', '#DIV/0!'))
+```
+
+Checking training and test set for columns that only contain NAs it is found that 100 columns can be discarded since they do not contain information.
+```
+# reduce rows and columns
+na_columns_index <- which(sapply(test_raw, function(x) all(is.na(x))))
+train_no_na_columns <- train_raw[,-na_columns_index]
+test_no_na_columns <- test_raw[,-na_columns_index]
+```
+
+The test set only contains observations with new_window 'no' so the training set is filtered for this dropping 406 
+observations. 
+```
+new_window_is_no_rows <- which(train_no_na_columns$new_window == 'no')
+train_no_na_columns <- train_no_na_columns[new_window_is_no_rows,]
+```
+
+In addition the first 6 columns are left out in both sets as they contain an index, names, timestamps and the new_window variable.
+```
+first_columns <- 1:6
+train_no_na_no_first <- train_no_na_columns[,-first_columns]
+test_no_na_no_first <- test_no_na_columns[,-first_columns]
+
+train_all <- train_no_na_no_first
+test <- test_no_na_no_first
+```
+
+Shinking the data set reduces the computational effort in the training phase which is preferable as long as accuracy is acceptable.
+In order to be able assess out of sample error the training data set is split 70%/30% into training and validation set (called train and train_test respectively in the R script).
+```
+# split data
+train_index <- createDataPartition(train_all$classe, p=0.7, list=FALSE)
+train <- train_all[train_index,]
+train_test <- train_all[-train_index,]
+```
+
+
+3 Training and test
+-------------------
+As a robust versatile classification method random forest is chosen as the prediction model. A random forest model 
+with **k-fold cross-validation** with k=4 is applied to the training data. The training run is sped up by making use of 
+the parallel processing functionality of the doParallel R package.
+```
+# make and register cluster
+cluster <- makeCluster(detectCores())
+registerDoParallel(cluster)
+
+# fit random forest
+control <- trainControl(method="cv", number=4)
+fit_rf <- train(classe~., data=train, method='rf', trControl=control)
+```
+
+The training algorithm suggests to use a model with 27 randomly selected predictors (mtry) using 13453 samples of 53 predictors on 5 classes.
+On the training data set (name: train) an in-sample accuracy of 99.7% is calculated. On the validation set (name: train_test) an out of sample accuracy of 99.5% is found. Its 95% confidence interval ranges from 99.28% to 99.66%, thus the **out of sample accuracy** is **expected** to lie in the neighbourhood of this range (using 99.5% as expected value if required). Use of the large validation set increases confidence in the found out of sample accuracy.
