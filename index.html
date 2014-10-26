@@ -99,7 +99,11 @@ registerDoParallel(cluster)
 # fit random forest
 control &lt;- trainControl(method=&quot;cv&quot;, number=4)
 fit_rf &lt;- train(classe~., data=train, method='rf', trControl=control)</code></pre>
-<p>The training algorithm suggests to use a model with 27 randomly selected predictors (mtry) using 13453 samples of 53 predictors on 5 classes. On the training data set (name: train) an in-sample accuracy of 99.7% is calculated. On the validation set (name: train_test) an out of sample accuracy of 99.5% is found. Its 95% confidence interval ranges from 99.28% to 99.66%, thus the <strong>out of sample accuracy</strong> is <strong>expected</strong> to lie in the neighbourhood of this range (using 99.5% as expected value if required). Use of the large validation set increases confidence in the found out of sample accuracy.</p>
+<p>The training algorithm suggests to use a model with 27 randomly selected predictors (mtry) using 13453 samples of 53 predictors on 5 classes.</p>
+<pre><code># validation set prediction accuracy
+predictions_train_test &lt;- predict(fit_rf, newdata=train_test)
+confusionMatrix(predictions_train_test, train_test$classe)</code></pre>
+<p>On the training data set (name: train) an in-sample accuracy of 99.7% is calculated. On the validation set (name: train_test) an out of sample accuracy of 99.5% is found. Its 95% confidence interval ranges from 99.28% to 99.66%, thus the <strong>out of sample accuracy</strong> is <strong>expected</strong> to lie in the neighbourhood of this range (using 99.5% as expected value if required). Use of the large validation set increases confidence in the estimated out of sample accuracy.</p>
 </div>
 
 
